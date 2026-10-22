@@ -159,7 +159,7 @@ spec:
           # TODO: remplacez par VOTRE image publiee sur GHCR
           #       ex. ghcr.io/<votre-username>/<votre-depot>:latest
           #       Le paquet doit etre public, sinon voir imagePullSecrets dans kubernetes.md
-          image: ghcr.io/ultimateraph/log430-01-equipe1-lab5:latest
+          image: ghcr.io/ultimateraph/log430-01-equipe1-lab5:raph-labo5
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
