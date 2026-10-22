@@ -1,11 +1,12 @@
 FROM python:3.11-slim
 
-WORKDIR /app/src
-COPY locustfiles/ /mnt/locust/
-
+WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY locustfiles/ /mnt/locust/
+COPY src/ ./src/
+COPY pyproject.toml ./
 
+WORKDIR /app/src
 CMD ["python", "store_manager.py"]

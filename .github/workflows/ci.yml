@@ -1,0 +1,44 @@
+name: example_CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: Labo5
+
+    steps:
+      - name: Checkout dépot
+        uses: actions/checkout@v4
+
+      - name: Créer fichier .env 
+        run: |
+          echo "DB_HOST=mysql" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_USER=labo05" >> .env
+          echo "DB_PASSWORD=labo05" >> .env
+          echo "DB_NAME=labo05_db" >> .env
+          echo "REDIS_HOST=redis" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "REDIS_DB=0" >> .env
+          echo "KAFKA_HOST=labo7-seulement!" >> .env
+
+      - name: Créer le réseau Docker
+        run: docker network create labo05-network
+
+      - name: Démarrer MySQL et Redis
+        run: docker compose up -d --wait mysql redis
+
+      - name: Construire Store Manager
+        run: docker compose build store_manager
+
+      - name: Exécuter les tests
+        run: docker compose run --rm --no-deps store_manager python -m pytest
+
+      - name: Afficher les logs en cas d’échec
+        if: failure()
+        run: docker compose logs
+
+      - name: Arrêter les conteneurs
+        if: always()
+        run: docker compose down -v
