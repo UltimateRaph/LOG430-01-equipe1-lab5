@@ -9,7 +9,6 @@ data:
   DB_HOST: mysql
   DB_PORT: "3306"
   DB_USER: labo05
-  DB_PASSWORD: labo05
   DB_NAME: labo05_db
   REDIS_HOST: redis
   REDIS_PORT: "6379"
@@ -50,13 +49,19 @@ spec:
           image: mysql:8.4.7
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: root
+              valueFrom:
+                secretKeyRef:
+                  name: store-db-secret
+                  key: MYSQL_ROOT_PASSWORD
             - name: MYSQL_DATABASE
               value: labo05_db
             - name: MYSQL_USER
               value: labo05
             - name: MYSQL_PASSWORD
-              value: labo05
+              valueFrom:
+                secretKeyRef:
+                  name: store-db-secret
+                  key: DB_PASSWORD
           ports:
             - containerPort: 3306
           volumeMounts:
@@ -66,7 +71,10 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
           livenessProbe:
             exec:
-              command: ["mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+              command:
+                - sh
+                - -c
+                - 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -u root'
             initialDelaySeconds: 30
             periodSeconds: 60
       volumes:
@@ -151,11 +159,13 @@ spec:
           # TODO: remplacez par VOTRE image publiee sur GHCR
           #       ex. ghcr.io/<votre-username>/<votre-depot>:latest
           #       Le paquet doit etre public, sinon voir imagePullSecrets dans kubernetes.md
-          image: nkinesis/store-manager:latest
+          image: ghcr.io/ultimateraph/log430-01-equipe1-lab5:latest
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
                 name: app-config
+            - secretRef:
+                name: store-db-secret
           ports:
             - containerPort: 5000
 
