@@ -1,0 +1,16 @@
+# docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d --no-build
+services:
+  store_manager:
+    image: ghcr.io/ultimateraph/log430-01-equipe1-lab5:latest
+    build: !reset null
+    volumes: !reset []
+    restart: unless-stopped
+
+  krakend:
+    restart: unless-stopped
+
+  prometheus:
+    restart: unless-stopped
+
+  locust:
+    restart: unless-stopped

@@ -2,6 +2,8 @@ services:
   store_manager:
     build: .
     container_name: store_manager 
+    env_file:
+      - .env
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
@@ -63,11 +65,11 @@ services:
       - mysql_data:/var/lib/mysql
       - ./db-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot"]
-      interval: 1m
-      timeout: 10s
-      retries: 5
-      start_period: 10s
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   redis:
     image: redis:7
