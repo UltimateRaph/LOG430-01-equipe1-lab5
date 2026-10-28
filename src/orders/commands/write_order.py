@@ -105,18 +105,16 @@ def modify_order(order_id: int, is_paid: bool):
         session.close()
 
 def request_payment_link(order_id, total_amount, user_id):
+    payment_id = 0
     payment_transaction = {
         "user_id": user_id,
         "order_id": order_id,
         "total_amount": total_amount
     }
-    response_from_payment_service = requests.post('http://api-gateway:8080/payments-api/payments',
-    json=payment_transaction,
-    headers={'Content-Type': 'application/json'}
-    )
+
+    # TODO: Requête à POST /payments
     print("")
-    
-    payment_id = response_from_payment_service.json()["payment_id"]
+    response_from_payment_service = {}
 
     if True: # if response.ok
         print(f"ID paiement: {payment_id}")

@@ -3,33 +3,6 @@ name: example_CI
 on: [push, pull_request]
 
 jobs:
-  publish_branch:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/raphael'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Authentification GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Nom de l’image
-        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-
-      - name: Construire et publier
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:raph-labo5
   build:
     runs-on: ubuntu-latest
     environment: Labo5
