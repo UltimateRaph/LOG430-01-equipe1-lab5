@@ -11,7 +11,9 @@ services:
     ports:
       - "5000:5000"
     networks:
-      - labo05-network
+      labo05-network:
+        aliases:
+          - store-manager
     depends_on:
       mysql:
         condition: service_healthy
