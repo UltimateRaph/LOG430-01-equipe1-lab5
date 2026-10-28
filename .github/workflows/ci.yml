@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 jobs:
   publish_branch:
+    needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/raphael'
     runs-on: ubuntu-latest
     permissions:
@@ -32,40 +33,82 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:raph-labo5
   build:
     runs-on: ubuntu-latest
-    environment: Labo5
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout dépot
+      - name: Checkout Store Manager
         uses: actions/checkout@v4
+        with:
+          repository: ultimateraph/LOG430-01-equipe1-lab5
+          ref: ${{ github.event.repository.name == 'LOG430-01-equipe1-lab5' && github.sha || 'raphael' }}
+          token: ${{ secrets.LAB_REPOS_TOKEN }}
+          persist-credentials: false
+          path: store
 
-      - name: Créer fichier .env 
+      - name: Checkout paiement
+        uses: actions/checkout@v4
+        with:
+          repository: ultimateraph/LOG430-01-equipe1-lab5-payment
+          ref: ${{ github.event.repository.name == 'LOG430-01-equipe1-lab5-payment' && github.sha || 'raphael' }}
+          token: ${{ secrets.LAB_REPOS_TOKEN }}
+          persist-credentials: false
+          path: payment
+
+      - name: Préparer les configurations de test
         run: |
-          echo "DB_HOST=mysql" >> .env
-          echo "DB_PORT=3306" >> .env
-          echo "DB_USER=labo05" >> .env
-          echo "DB_PASSWORD=labo05" >> .env
-          echo "DB_NAME=labo05_db" >> .env
-          echo "REDIS_HOST=redis" >> .env
-          echo "REDIS_PORT=6379" >> .env
-          echo "REDIS_DB=0" >> .env
-          echo "KAFKA_HOST=labo7-seulement!" >> .env
+          cat > store/.env <<'EOF'
+          DB_HOST=mysql
+          DB_PORT=3306
+          DB_USER=labo05
+          DB_PASSWORD=labo05
+          DB_NAME=labo05_db
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          REDIS_DB=0
+          EOF
 
-      - name: Créer le réseau Docker
-        run: docker network create labo05-network
+          cat > payment/.env <<'EOF'
+          DB_HOST=mysql_payments
+          DB_PORT=3306
+          DB_USER=labo05
+          DB_PASSWORD=labo05
+          DB_NAME=labo05_payments_db
+          EOF
 
-      - name: Démarrer MySQL et Redis
-        run: docker compose up -d --wait mysql redis
+          docker network create labo05-network
 
-      - name: Construire Store Manager
-        run: docker compose build store_manager
+      - name: Démarrer les bases de données
+        run: |
+          docker compose -p ci-store -f store/docker-compose.yml up -d --wait --wait-timeout 300 mysql redis
+          docker compose -p ci-payment -f payment/docker-compose.yml up -d --wait --wait-timeout 300 mysql_payments
 
-      - name: Exécuter les tests
-        run: docker compose run --rm --no-deps store_manager python -m pytest
+      - name: Démarrer les applications et KrakenD
+        run: |
+          docker compose -p ci-payment -f payment/docker-compose.yml up -d --build payments_api
+          docker compose -p ci-store -f store/docker-compose.yml up -d --build store_manager krakend
+
+      - name: Attendre les applications
+        run: |
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors --max-time 5 http://localhost:5000/health-check
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors --max-time 5 http://localhost:5009/
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors --max-time 5 http://localhost:8080/__health
+
+      - name: Tester Store Manager
+        run: docker compose -p ci-store -f store/docker-compose.yml exec -T store_manager python -m pytest
+
+      - name: Tester le paiement
+        run: docker compose -p ci-payment -f payment/docker-compose.yml exec -T payments_api python -m pytest
 
       - name: Afficher les logs en cas d’échec
         if: failure()
-        run: docker compose logs
+        run: |
+          docker compose -p ci-store -f store/docker-compose.yml logs --tail 100
+          docker compose -p ci-payment -f payment/docker-compose.yml logs --tail 100
 
-      - name: Arrêter les conteneurs
+      - name: Nettoyer l’environnement de test
         if: always()
-        run: docker compose down -v
+        run: |
+          docker compose -p ci-store -f store/docker-compose.yml down -v
+          docker compose -p ci-payment -f payment/docker-compose.yml down -v
