@@ -62,11 +62,7 @@ jobs:
           DB_HOST=mysql
           DB_PORT=3306
           DB_USER=labo05
-<<<<<<< Updated upstream
-          DB_PASSWORD=labo05
-=======
           DB_PASSWORD=${{ secrets.CI_DB_PASSWORD }}
->>>>>>> Stashed changes
           DB_NAME=labo05_db
           REDIS_HOST=redis
           REDIS_PORT=6379
@@ -77,11 +73,7 @@ jobs:
           DB_HOST=mysql_payments
           DB_PORT=3306
           DB_USER=labo05
-<<<<<<< Updated upstream
-          DB_PASSWORD=labo05
-=======
           DB_PASSWORD=${{ secrets.CI_DB_PASSWORD }}
->>>>>>> Stashed changes
           DB_NAME=labo05_payments_db
           EOF
 
