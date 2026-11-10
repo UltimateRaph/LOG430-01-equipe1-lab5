@@ -16,3 +16,4 @@ opentelemetry-sdk==1.41.0
 opentelemetry-exporter-otlp-proto-grpc==1.41.0
 opentelemetry-instrumentation-flask==0.62b0
 opentelemetry-instrumentation-requests==0.62b0
+kafka-python==2.2.15
