@@ -11,3 +11,8 @@ requests>=2.32
 prometheus-client 
 prometheus-flask-exporter
 locust
+opentelemetry-api==1.41.0
+opentelemetry-sdk==1.41.0
+opentelemetry-exporter-otlp-proto-grpc==1.41.0
+opentelemetry-instrumentation-flask==0.62b0
+opentelemetry-instrumentation-requests==0.62b0
