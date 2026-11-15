@@ -6,6 +6,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY locustfiles/ /mnt/locust/
 COPY src/ ./src/
+COPY singleton.py ./
+ENV PYTHONPATH=/app
 COPY pyproject.toml ./
 
 WORKDIR /app/src

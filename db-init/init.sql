@@ -2,13 +2,24 @@
 CREATE DATABASE IF NOT EXISTS labo05_db;
 USE labo05_db;
 
--- Users table
-DROP TABLE IF EXISTS users;
+-- User types and users
+CREATE TABLE user_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(15) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO user_types (id, name) VALUES
+(1, 'Client'), (2, 'Employee'), (3, 'Manager');
+
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_type_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_user_type
+        FOREIGN KEY (user_type_id) REFERENCES user_types(id) ON DELETE RESTRICT
 );
 
 -- Products table
@@ -54,10 +65,12 @@ CREATE TABLE stocks (
 );
 
 -- Mock data: users
-INSERT INTO users (name, email) VALUES
-('Ada Lovelace', 'alovelace@example.com'),
-('Adele Goldberg', 'agoldberg@example.com'),
-('Alan Turing', 'aturing@example.com');
+INSERT INTO users (name, email, user_type_id) VALUES
+('Ada Lovelace', 'alovelace@example.com', 1),
+('Adele Goldberg', 'agoldberg@example.com', 1),
+('Alan Turing', 'aturing@example.com', 1),
+('Jane Doe', 'jdoe@magasinducoin.ca', 2),
+('Da Boss', 'dboss@magasinducoin.ca', 3);
 
 -- Mock data: products
 INSERT INTO products (name, sku, price) VALUES

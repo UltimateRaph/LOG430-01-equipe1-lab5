@@ -6,6 +6,7 @@ Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 
 from flask import jsonify
 from orders.commands.write_user import add_user, delete_user
+from orders.models.user import DEFAULT_USER_TYPE_ID
 from orders.queries.read_user import get_user_by_id
 
 def create_user(request):
@@ -13,9 +14,12 @@ def create_user(request):
     payload = request.get_json() or {}
     name = payload.get('name')
     email = payload.get('email')
+    user_type_id = payload.get('user_type_id', DEFAULT_USER_TYPE_ID)
     try:
-        user_id = add_user(name, email)
+        user_id = add_user(name, email, user_type_id)
         return jsonify({'user_id': user_id}), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

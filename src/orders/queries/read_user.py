@@ -16,7 +16,8 @@ def get_user_by_id(user_id):
         return {
             'id': result[0].id,
             'name': result[0].name,
-            'email': result[0].email
+            'email': result[0].email,
+            'user_type_id': result[0].user_type_id
         }
     else:
         return {}

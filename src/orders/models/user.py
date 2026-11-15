@@ -4,8 +4,18 @@ SPDX - License - Identifier: LGPL - 3.0 - or -later
 Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String
 from orders.models.base import Base
+
+DEFAULT_USER_TYPE_ID = 1
+
+
+class UserType(Base):
+    __tablename__ = 'user_types'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(15), nullable=False)
+
 
 class User(Base):
     __tablename__ = 'users'
@@ -13,3 +23,4 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
     email = Column(String, nullable=False)
+    user_type_id = Column(Integer, ForeignKey('user_types.id', ondelete='RESTRICT'), nullable=False)

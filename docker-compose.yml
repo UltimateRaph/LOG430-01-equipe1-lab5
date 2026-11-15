@@ -1,7 +1,9 @@
+name: labo07-store
+
 services:
   store_manager:
     build: .
-    container_name: store_manager 
+    container_name: store_manager-labo07
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
@@ -22,7 +24,7 @@ services:
        - "8089:8089"
      volumes:
        - ./locustfiles:/mnt/locust
-     command: -f /mnt/locust/locustfile.py --host=http://api-gateway:8080
+     command: -f /mnt/locust/locustfile_users.py --host=http://store_manager:5000
      depends_on:
       - store_manager
      networks:
@@ -30,7 +32,7 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
+    container_name: prometheus-labo07
     ports:
       - "9090:9090"
     volumes:
@@ -85,13 +87,15 @@ services:
 
   krakend:
     image: devopsfaith/krakend:2.7
-    container_name: api-gateway
+    container_name: api-gateway-labo07
     ports:
-      - "8080:8080"
+      - "${KRAKEND_HOST_PORT:-8081}:8080"
     volumes:
       - ./config/krakend.json:/etc/krakend/krakend.json
     networks:
-      - labo05-network
+      labo05-network:
+        aliases:
+          - api-gateway
     depends_on:
       - store_manager
 
