@@ -11,10 +11,13 @@ from flask import Flask, request, jsonify
 from orders.controllers.order_controller import create_order, remove_order, get_order, get_report_highest_spending_users, get_report_best_selling_products, update_order
 from orders.controllers.user_controller import create_user, remove_user, get_user
 from stocks.controllers.product_controller import create_product, remove_product, get_product
-from stocks.controllers.stock_controller import get_stock, populate_redis_on_startup, set_stock, get_stock_overview
+from stocks.controllers.stock_controller import get_stock, populate_redis_on_startup, set_stock, get_stock_overview, update_stock
 from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
  
+from tracing import configure_tracing
+
 app = Flask(__name__)
+tracer = configure_tracing(app)
 
 # Auto-populate Redis 5s after API startup (to give enough time for the DB to start up as well)
 thread = threading.Timer(10.0, populate_redis_on_startup)
@@ -32,12 +35,14 @@ def health():
 
 # Write routes (Commands)
 @app.post('/orders')
+@tracer.start_as_current_span("orders.create")
 def post_orders():
     """Create a new order based on information on request body"""
     counter_orders.inc()
     return create_order(request)
 
 @app.delete('/orders/<int:order_id>')
+@tracer.start_as_current_span("orders.delete")
 def delete_orders_id(order_id):
     """Delete an order with a given order_id"""
     return remove_order(order_id)
@@ -66,6 +71,12 @@ def delete_users_id(user_id):
 def post_stocks():
     """Set product stock based on information on request body"""
     return set_stock(request)
+
+@app.put('/stocks')
+@tracer.start_as_current_span("stocks.update")
+def put_stocks():
+    """Add or remove the quantities in the request."""
+    return update_stock(request)
 
 # Read routes (Queries) 
 @app.get('/orders/<int:order_id>')

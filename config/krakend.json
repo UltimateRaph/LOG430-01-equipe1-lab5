@@ -5,10 +5,36 @@
   "cache_ttl": "300s",
   "output_encoding": "json",
   "port": 8080,
+  "extra_config": {
+    "telemetry/opentelemetry": {
+      "service_name": "krakend-gateway",
+      "service_version": "1.0.0",
+      "exporters": {
+        "otlp": [
+          {
+            "name": "jaeger",
+            "host": "jaeger",
+            "port": 4317,
+            "use_http": false,
+            "disable_metrics": true
+          }
+        ]
+      },
+      "layers": {
+        "global": {"disable_metrics": true},
+        "proxy": {"disable_metrics": true},
+        "backend": {
+          "metrics": {"disable_stage": true},
+          "traces": {"round_trip": true}
+        }
+      }
+    }
+  },
   "endpoints": [
     {
       "endpoint": "/payments-api/payments",
       "method": "POST",
+      "input_headers": ["Content-Type", "Traceparent", "Tracestate", "Baggage"],
       "backend": [
         {
           "url_pattern": "/payments",
@@ -20,6 +46,7 @@
     {
       "endpoint": "/payments-api/payments/process/{payment_id}",
       "method": "POST",
+      "input_headers": ["Content-Type", "Traceparent", "Tracestate", "Baggage"],
       "backend": [
         {
           "url_pattern": "/payments/process/{payment_id}",
@@ -31,6 +58,7 @@
     {
       "endpoint": "/store-manager-api/orders",
       "method": "POST",
+      "input_headers": ["Content-Type", "Traceparent", "Tracestate", "Baggage"],
       "backend": [
         {
           "url_pattern": "/orders",
@@ -47,6 +75,7 @@
     {
       "endpoint": "/store-manager-api/orders",
       "method": "PUT",
+      "input_headers": ["Content-Type", "Traceparent", "Tracestate", "Baggage"],
       "backend": [
         {
           "url_pattern": "/orders",
@@ -55,8 +84,42 @@
       ]
     },
     {
+      "endpoint": "/store-manager-api/orders/{order_id}",
+      "method": "GET",
+      "input_headers": ["Traceparent", "Tracestate", "Baggage"],
+      "backend": [
+        {
+          "url_pattern": "/orders/{order_id}",
+          "host": ["http://store_manager:5000"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/store-manager-api/orders/{order_id}",
+      "method": "DELETE",
+      "input_headers": ["Traceparent", "Tracestate", "Baggage"],
+      "backend": [
+        {
+          "url_pattern": "/orders/{order_id}",
+          "host": ["http://store_manager:5000"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/store-manager-api/stocks",
+      "method": "PUT",
+      "input_headers": ["Content-Type", "Traceparent", "Tracestate", "Baggage"],
+      "backend": [
+        {
+          "url_pattern": "/stocks",
+          "host": ["http://store_manager:5000"]
+        }
+      ]
+    },
+    {
       "endpoint": "/store-manager-api/test/slow/{delay}",
       "method": "GET",
+      "input_headers": ["Traceparent", "Tracestate", "Baggage"],
       "backend": [
         {
           "url_pattern": "/test/slow/{delay}",

@@ -40,7 +40,10 @@ def test_stock_flow(client):
     assert product_id > 0
     logger.debug(f"Created product with ID: {product_id}")
     
-    # 2. Add 5 units to stock (POST /stocks)
+    # 2. Set stock on a new product, then update the existing row.
+    response = client.post('/stocks', json={'product_id': product_id, 'quantity': 6})
+    assert response.status_code == 201, response.get_json()
+
     stock_data = {
         'product_id': product_id,
         'quantity': 5
@@ -89,6 +92,17 @@ def test_stock_flow(client):
     assert order_id > 0
     logger.debug(f"Created order with ID: {order_id}")
     
+    # Order creation leaves stock changes to the Saga.
+    response = client.get(f'/stocks/{product_id}')
+    assert response.status_code == 201
+    assert response.get_json()['quantity'] == 5
+    response = client.get(f'/orders/{order_id}')
+    assert response.status_code == 200
+    assert response.get_json()['payment_link'] == ''
+
+    response = client.put('/stocks', json={'items': order_data['items'], 'operation': '-'})
+    assert response.status_code == 201, response.get_json()
+
     # 5. Verify stock again - should have 3 units (5 - 2) (GET /stocks/:id)
     response = client.get(f'/stocks/{product_id}')
     assert response.status_code == 201, f"Failed to get stock after order: {response.get_json()}"
@@ -96,3 +110,9 @@ def test_stock_flow(client):
     assert stock_data['product_id'] == product_id
     assert stock_data['quantity'] == 3, f"Expected 3 units, got {stock_data['quantity']}"
     logger.debug(f"Stock after order: {stock_data['quantity']} units")
+
+    response = client.put('/stocks', json={'items': order_data['items'], 'operation': '+'})
+    assert response.status_code == 201, response.get_json()
+    assert client.delete(f'/orders/{order_id}').get_json() == {'deleted': True}
+    assert client.get(f'/orders/{order_id}').get_json() == {}
+    assert client.get(f'/stocks/{product_id}').get_json()['quantity'] == 5

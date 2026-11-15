@@ -5,13 +5,10 @@ Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
 import json
 from logger import Logger
-import requests
-from flask import request
 from orders.models.order import Order
 from stocks.models.product import Product
 from sqlalchemy.exc import SQLAlchemyError
 from orders.models.order_item import OrderItem
-from stocks.commands.write_stock import check_in_items_to_stock, check_out_items_from_stock, update_stock_redis
 from db import get_sqlalchemy_session, get_redis_conn
 
 logger = Logger.get_instance("add_order")
@@ -47,15 +44,12 @@ def add_order(user_id: int, items: list):
                 'unit_price': unit_price
             })
 
-        new_order = Order(user_id=user_id, total_amount=total_amount, payment_link=None)
+        new_order = Order(user_id=user_id, total_amount=total_amount, payment_link="", is_paid=False)
         session.add(new_order)
         session.flush()   
 
         order_id = new_order.id
 
-        new_order.payment_link = request_payment_link(new_order.id, total_amount, user_id)
-        session.flush()  
-        
         for item in order_items:
             order_item = OrderItem(
                 order_id=order_id,
@@ -65,14 +59,9 @@ def add_order(user_id: int, items: list):
             )
             session.add(order_item)
 
-        # Update stock
-        check_out_items_from_stock(session, order_items)
-
         session.commit()
         logger.debug("Une commande a été ajouté")
 
-        # Insert order into Redis
-        update_stock_redis(order_items, '-')
         add_order_to_redis(order_id, user_id, total_amount, items, new_order.payment_link)
         return order_id
 
@@ -82,16 +71,19 @@ def add_order(user_id: int, items: list):
     finally:
         session.close()
 
-def modify_order(order_id: int, is_paid: bool):
+def modify_order(order_id: int, is_paid: bool | None, payment_link: str | None = None):
     session = get_sqlalchemy_session()
     try:
         order = session.query(Order).filter(Order.id == order_id).first()
 
-        if order is not None and is_paid is not None:
+        if order is None:
+            return False
+        if is_paid is not None:
             order.is_paid = is_paid
+        if payment_link is not None:
+            order.payment_link = payment_link
 
         session.commit()
-        session.refresh(order)
         return True
     except SQLAlchemyError as e:
         session.rollback()
@@ -104,25 +96,6 @@ def modify_order(order_id: int, is_paid: bool):
     finally:
         session.close()
 
-def request_payment_link(order_id, total_amount, user_id):
-    payment_transaction = {
-        "user_id": user_id,
-        "order_id": order_id,
-        "total_amount": total_amount
-    }
-    response_from_payment_service = requests.post('http://api-gateway:8080/payments-api/payments',
-    json=payment_transaction,
-    headers={'Content-Type': 'application/json'}
-    )
-    print("")
-    
-    payment_id = response_from_payment_service.json()["payment_id"]
-
-    if True: # if response.ok
-        print(f"ID paiement: {payment_id}")
-
-    return f"http://api-gateway:8080/payments-api/payments/process/{payment_id}" 
-
 def delete_order(order_id: int):
     """Delete order in MySQL, keep Redis in sync"""
     session = get_sqlalchemy_session()
@@ -131,13 +104,10 @@ def delete_order(order_id: int):
         if order:
 
             # MySQL
-            order_items = session.query(OrderItem).filter(OrderItem.order_id == order_id).all()
             session.delete(order)
-            check_in_items_to_stock(session, order_items)
             session.commit()
 
             # Redis
-            update_stock_redis(order_items, '+')
             delete_order_from_redis(order_id)
             return 1  
         else:

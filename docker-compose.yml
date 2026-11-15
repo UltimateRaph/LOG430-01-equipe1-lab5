@@ -4,6 +4,7 @@ services:
     container_name: store_manager 
     environment:
       - PYTHONUNBUFFERED=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     volumes:
       - .:/app
     ports:
