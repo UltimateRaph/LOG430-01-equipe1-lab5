@@ -3,6 +3,7 @@ Order manager application
 SPDX - License - Identifier: LGPL - 3.0 - or -later
 Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
+import os
 import threading
 from graphene import Schema
 from stocks.schemas.query import Query
@@ -12,16 +13,31 @@ from orders.controllers.user_controller import create_user, remove_user, get_use
 from stocks.controllers.product_controller import create_product, remove_product, get_product
 from stocks.controllers.stock_controller import get_stock, populate_redis_on_startup, set_stock, get_stock_overview, update_stock
  
-# TODO: utilisez pour la config à Jaeger
-# from opentelemetry import trace
-# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-# from opentelemetry.sdk.resources import Resource
-# from opentelemetry.sdk.trace import TracerProvider
-# from opentelemetry.sdk.trace.export import BatchSpanProcessor
-# from opentelemetry.instrumentation.flask import FlaskInstrumentor
-# from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 app = Flask(__name__)
+
+resource = Resource.create({
+    "service.name": "store-manager",
+    "service.version": "1.0.0"
+})
+tracer_provider = TracerProvider(resource=resource)
+tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(
+    endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317"),
+    insecure=True
+)))
+trace.set_tracer_provider(tracer_provider)
+tracer = trace.get_tracer(__name__)
+
+# Propagate the current trace context through Flask and outgoing HTTP requests.
+FlaskInstrumentor().instrument_app(app)
+RequestsInstrumentor().instrument()
 
 # Auto-populate Redis 5s after API startup (to give enough time for the DB to start up as well)
 thread = threading.Timer(10.0, populate_redis_on_startup)
@@ -35,11 +51,13 @@ def health():
 
 # Write routes (Commands)
 @app.post('/orders')
+@tracer.start_as_current_span("orders.create")
 def post_orders():
     """Create a new order based on information on request body"""
     return create_order(request)
 
 @app.delete('/orders/<int:order_id>')
+@tracer.start_as_current_span("orders.delete")
 def delete_orders_id(order_id):
     """Delete an order with a given order_id"""
     return remove_order(order_id)
@@ -70,12 +88,14 @@ def post_stocks():
     return set_stock(request)
 
 @app.put('/stocks')
+@tracer.start_as_current_span("stocks.update")
 def put_stocks():
     """Check in/out product stock for given product_id and quantity"""
     return update_stock(request)
 
 # Read routes (Queries) 
 @app.get('/orders/<int:order_id>')
+@tracer.start_as_current_span("orders.get")
 def get_order_id(order_id):
     """Get order with a given order_id"""
     return get_order(order_id)
@@ -126,6 +146,7 @@ def graphql_supplier():
 
 # Integration with payment service
 @app.put('/orders')
+@tracer.start_as_current_span("orders.update")
 def put_orders():
     """Update one or more order fields"""
     return update_order(request)

@@ -15,13 +15,26 @@
             "name": "jaeger",
             "host": "jaeger",
             "port": 4317,
-            "use_http": false
+            "use_http": false,
+            "disable_metrics": true
           }
         ]
       }
     }
   },
   "endpoints": [
+    {
+      "endpoint": "/store-manager-api/orders",
+      "method": "PUT",
+      "input_headers": ["*"],
+      "backend": [
+        {
+          "url_pattern": "/orders",
+          "host": ["http://store_manager:5000"],
+          "timeout": "5s"
+        }
+      ]
+    },
     {
       "endpoint": "/store-manager-api/orders",
       "method": "POST",
