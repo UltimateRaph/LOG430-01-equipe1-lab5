@@ -25,12 +25,19 @@ def update_stock(request):
     payload = request.get_json() or {}
     items = payload.get('items')
     operation = payload.get('operation')
+    session = None
     try:
         session = get_sqlalchemy_session()
         update_stock_mysql(session, items, operation)
+        session.commit()
         return jsonify({'result': 'OK'}), 201
-    except Exception as e:  
+    except Exception as e:
+        if session is not None:
+            session.rollback()
         return jsonify({'error': str(e)}), 500
+    finally:
+        if session is not None:
+            session.close()
 
 def get_stock(product_id):
     """Get stock quantities of a product"""
