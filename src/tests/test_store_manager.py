@@ -62,7 +62,7 @@ def test_stock_flow(client):
     
     # Create a user for the order. User emails MUST be unique.
     random_email_address = f"t{uuid.uuid1()}@example.com"
-    user_data = {'name': 'Test User', 'email': random_email_address}
+    user_data = {'name': 'Test User', 'email': random_email_address, 'user_type_id': 1}
     response = client.post('/users',
                           data=json.dumps(user_data),
                           content_type='application/json')
@@ -96,3 +96,25 @@ def test_stock_flow(client):
     assert stock_data['product_id'] == product_id
     assert stock_data['quantity'] == 3, f"Expected 3 units, got {stock_data['quantity']}"
     logger.debug(f"Stock after order: {stock_data['quantity']} units")
+
+
+@pytest.mark.parametrize("user_type_id", [1, 2, 3])
+def test_user_type_flow(client, user_type_id):
+    """Create, read and delete each user type against the real database."""
+    user_data = {
+        'name': f'Test type {user_type_id}',
+        'email': f'type-{uuid.uuid4()}@example.com',
+        'user_type_id': user_type_id,
+    }
+    response = client.post('/users', json=user_data)
+    assert response.status_code == 201, response.get_json()
+    user_id = response.get_json()['user_id']
+
+    try:
+        response = client.get(f'/users/{user_id}')
+        assert response.status_code == 201, response.get_json()
+        assert response.get_json()['user_type_id'] == user_type_id
+    finally:
+        response = client.delete(f'/users/{user_id}')
+        assert response.status_code == 200, response.get_json()
+        assert response.get_json() == {'deleted': True}

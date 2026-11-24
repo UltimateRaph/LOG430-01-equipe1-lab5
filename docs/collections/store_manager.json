@@ -281,7 +281,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Jane Doe\",\n    \"email\": \"jd@example.ca\"\n}",
+							"raw": "{\n    \"name\": \"Jane Doe\",\n    \"email\": \"jd@example.ca\",\n    \"user_type_id\": 2\n}",
 							"options": {
 								"raw": {
 									"language": "json"
